@@ -9,38 +9,49 @@ ADM_IFACE=eth4
 
 LAMP_SERVER=192.168.1.20
 
-# Flush and policies.
+# Flushes.
 iptables -F INPUT
 iptables -F OUTPUT
 iptables -F FORWARD
+
+iptables -t nat -F PREROUTING
+iptables -t nat -F POSTROUTING
+
+# Default policies.
 iptables -P INPUT DROP
 iptables -P OUTPUT ACCEPT
 iptables -P FORWARD DROP
 
+
 ### Milestone 1 ###
 
-# Open SSH and HTTP ports from the ADM subnet.
+# Comented OUTPUT rules, since default policy is ACCEPT.
+
+# Open SSH and HTTP ports for the ADM subnet.
 iptables -A INPUT -i $ADM_IFACE -p tcp --dport 22 -j ACCEPT
 iptables -A INPUT -i $ADM_IFACE -p tcp --dport 80 -j ACCEPT
-iptables -A OUTPUT -o $ADM_IFACE -p tcp --sport 22 -j ACCEPT
-iptables -A OUTPUT -o $ADM_IFACE -p tcp --sport 80 -j ACCEPT
+#iptables -A OUTPUT -o $ADM_IFACE -p tcp --sport 22 -j ACCEPT
+#iptables -A OUTPUT -o $ADM_IFACE -p tcp --sport 80 -j ACCEPT
 
-# Open DHCP ports from the IN subnet.
+# Open DHCP port for the IN subnet.
 iptables -A INPUT -i $IN_IFACE -p udp --dport 67 --sport 68 -j ACCEPT
-iptables -A OUTPUT -o $IN_IFACE -p udp --dport 68 --sport 67 -j ACCEPT
+#iptables -A OUTPUT -o $IN_IFACE -p udp --dport 68 --sport 67 -j ACCEPT
 
 # Allow all hosts to ping the firewall.
 iptables -A INPUT -p icmp --icmp-type 8 -j ACCEPT
-iptables -A OUTPUT -p icmp --icmp-type 0 -j ACCEPT
+#iptables -A OUTPUT -p icmp --icmp-type 0 -j ACCEPT
 
 # Allow the firewall to ping the hosts.
-iptables -A OUTPUT -p icmp --icmp-type 8 -j ACCEPT
+#iptables -A OUTPUT -p icmp --icmp-type 8 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 0 -j ACCEPT
 
-# Allow traceroute from the firewall.
-iptables -A OUTPUT -p udp -j ACCEPT
+# Allow the firewall to traceroute.
+#iptables -A OUTPUT -p udp -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 11 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 3 -j ACCEPT
+
+# Challenge 1
+iptables -A INPUT -p udp -j REJECT
 
 
 ### Milestone 2 ###
