@@ -4,6 +4,7 @@
 
 OUT_IFACE=eth0
 DMZ_IFACE=eth1
+DC_IFACE=eth2
 IN_IFACE=eth3
 ADM_IFACE=eth4
 
@@ -50,22 +51,32 @@ iptables -A INPUT -p icmp --icmp-type 0 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 11 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 3 -j ACCEPT
 
-# Challenge 1
+# Challenge 1.
 iptables -A INPUT -p udp -j REJECT
 
 
 ### Milestone 2 ###
 
-# Allow traffic between internal nets.
-# Allow connections from ADM and IN to OUT.
-iptables -A FORWARD -i $ADM_IFACE -j ACCEPT
-iptables -A FORWARD -i $IN_IFACE -j ACCEPT
-iptables -A FORWARD -i $DMZ_IFACE -j ACCEPT
+# Challenge 2.
+iptables -A PREROUTING -t raw -i $OUT_IFACE -d $LAMP_SERVER -p tcp --dport 80 -j NOTRACK
+iptables -A PREROUTING -t raw -i $DMZ_IFACE -s $LAMP_SERVER -p tcp --sport 80 -j NOTRACK
+
+# Allow RELATED and ESTABLISHED traffic from OUT.
 iptables -A FORWARD -i $OUT_IFACE -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-# Allow HTTP connections to LAMP server.
+# Allow HTTP and SSH connections to LAMP server.
 iptables -A FORWARD -i $OUT_IFACE -d $LAMP_SERVER -p tcp --dport 80 -j ACCEPT
+iptables -A FORWARD -i $DMZ_IFACE -s $LAMP_SERVER -p tcp --sport 80 -j ACCEPT
 iptables -A FORWARD ! -i $ADM_IFACE -d $LAMP_SERVER -p tcp --dport 22 -j DROP
+
+# Allow DMZ, DC, ADM and IN to exchange traffic.
+iptables -A FORWARD -i $DMZ_IFACE -o $OUT_IFACE -j DROP
+iptables -A FORWARD -i $DC_IFACE -o $OUT_IFACE -j DROP
+
+iptables -A FORWARD -i $DMZ_IFACE -j ACCEPT
+iptables -A FORWARD -i $DC_IFACE -j ACCEPT
+iptables -A FORWARD -i $ADM_IFACE -j ACCEPT
+iptables -A FORWARD -i $IN_IFACE -j ACCEPT
 
 
 ### Milestone 3 ###
