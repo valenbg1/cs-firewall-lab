@@ -10,6 +10,11 @@ ADM_IFACE=eth4
 
 LAMP_SERVER=192.168.1.20
 
+DMZ_NET=192.168.1.0/24
+DC_NET=10.0.2.0/24
+IN_NET=10.0.3.0/24
+ADM_NET=10.0.4.0/24
+
 # Flushes.
 iptables -F INPUT
 iptables -F OUTPUT
@@ -17,6 +22,8 @@ iptables -F FORWARD
 
 iptables -t nat -F PREROUTING
 iptables -t nat -F POSTROUTING
+
+iptables -t raw -F PREROUTING
 
 # Default policies.
 iptables -P INPUT DROP
@@ -51,15 +58,22 @@ iptables -A INPUT -p icmp --icmp-type 0 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 11 -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 3 -j ACCEPT
 
-# Challenge 1.
+
+### Challenge 1 ###
 iptables -A INPUT -p udp -j REJECT
 
 
-### Milestone 2 ###
+### Challenge 3 ###
 
-# Challenge 2.
-iptables -A PREROUTING -t raw -i $OUT_IFACE -d $LAMP_SERVER -p tcp --dport 80 -j NOTRACK
-iptables -A PREROUTING -t raw -i $DMZ_IFACE -s $LAMP_SERVER -p tcp --sport 80 -j NOTRACK
+iptables -A FORWARD -i $DMZ_IFACE ! -s $DMZ_NET -j DROP
+iptables -A FORWARD -i $DC_IFACE ! -s $DC_NET -j DROP
+iptables -A FORWARD -i $IN_IFACE ! -s $IN_NET -j DROP
+iptables -A FORWARD -i $ADM_IFACE ! -s $ADM_NET -j DROP
+
+iptables -A FORWARD -i $OUT_IFACE -s $DMZ_NET,$DC_NET,$IN_NET,$ADM_NET -j DROP
+
+
+### Milestone 2 ###
 
 # Allow RELATED and ESTABLISHED traffic from OUT.
 iptables -A FORWARD -i $OUT_IFACE -m state --state RELATED,ESTABLISHED -j ACCEPT
@@ -79,8 +93,15 @@ iptables -A FORWARD -i $ADM_IFACE -j ACCEPT
 iptables -A FORWARD -i $IN_IFACE -j ACCEPT
 
 
+### Challenge 2 (should be commented for milestone 3) ###
+iptables -A PREROUTING -t raw -i $OUT_IFACE -d $LAMP_SERVER -p tcp --dport 80 -j NOTRACK
+iptables -A PREROUTING -t raw -i $DMZ_IFACE -s $LAMP_SERVER -p tcp --sport 80 -j NOTRACK
+
+
 ### Milestone 3 ###
 
 iptables -t nat -A POSTROUTING -o $OUT_IFACE -j MASQUERADE
 iptables -t nat -A PREROUTING -i $OUT_IFACE -p tcp --dport 80 -j DNAT --to-destination ${LAMP_SERVER}:80
-iptables -A FORWARD -i $OUT_IFACE -p tcp --dport 80 -j ACCEPT
+
+# Already allowed.
+#iptables -A FORWARD -i $OUT_IFACE -p tcp --dport 80 -j ACCEPT
