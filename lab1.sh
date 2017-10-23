@@ -104,4 +104,4 @@ iptables -t nat -A POSTROUTING -o $OUT_IFACE -j MASQUERADE
 iptables -t nat -A PREROUTING -i $OUT_IFACE -p tcp --dport 80 -j DNAT --to-destination ${LAMP_SERVER}:80
 
 # Already allowed.
-#iptables -A FORWARD -i $OUT_IFACE -p tcp --dport 80 -j ACCEPT
+#iptables -A FORWARD -i $OUT_IFACE -d $LAMP_SERVER -p tcp --dport 80 -j ACCEPT
